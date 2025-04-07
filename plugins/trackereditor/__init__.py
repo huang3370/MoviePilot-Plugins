@@ -9,13 +9,13 @@ from app.plugins import _PluginBase
 
 class TrackerEditor(_PluginBase):
     # 插件名称
-    plugin_name = "Tracker替换"
+    plugin_name = "替换"
     # 插件描述
     plugin_desc = "批量replace种子的tracker qb 4.6.0已测试 tr只支持4.0以上(未测试)"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/honue/MoviePilot-Plugins/main/icons/tracker.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "honue"
     # 作者主页
