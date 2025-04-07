@@ -32,8 +32,8 @@ class TrackerEditor(_PluginBase):
     _password: str = None
     _host: str = None
     _port: int = None
-    _target_domain: str = None
-    _replace_domain: str = None
+    _target_domains: List[str] = None
+    _replace_domains: List[str] = None
 
     _onlyonce: bool = False
     _downloader: Union[Qbittorrent, Transmission] = None
@@ -46,8 +46,8 @@ class TrackerEditor(_PluginBase):
             self._port = config.get("port")
             self._username = config.get("username")
             self._password = config.get("password")
-            self._target_domain = config.get("target_domain")
-            self._replace_domain = config.get("replace_domain")
+            self._target_domains = config.get("target_domains", [])
+            self._replace_domains = config.get("replace_domains", [])
         if self._onlyonce:
             # 执行替换
             self._task()
@@ -63,11 +63,12 @@ class TrackerEditor(_PluginBase):
                 return
             for torrent in torrent_info_list:
                 for tracker in torrent.trackers:
-                    if self._target_domain in tracker.url:
-                        original_url = tracker.url
-                        new_url = tracker.url.replace(self._target_domain, self._replace_domain)
-                        logger.info(f"{original_url} 替换为\n {new_url}")
-                        torrent.edit_tracker(orig_url=original_url, new_url=new_url)
+                    for target_domain, replace_domain in zip(self._target_domains, self._replace_domains):
+                        if target_domain in tracker.url:
+                            original_url = tracker.url
+                            new_url = tracker.url.replace(target_domain, replace_domain)
+                            logger.info(f"{original_url} 替换为\n {new_url}")
+                            torrent.edit_tracker(orig_url=original_url, new_url=new_url)
 
         elif self._downloader_type == "transmission":
             self._downloader = Transmission(self._host, self._port, self._username, self._password)
@@ -78,13 +79,12 @@ class TrackerEditor(_PluginBase):
             for torrent in torrent_list:
                 new_tracker_list = []
                 for tracker in torrent.tracker_list:
-                    new_url = None
-                    if self._target_domain in tracker:
-                        new_url = tracker.replace(self._target_domain, self._replace_domain)
-                        new_tracker_list.append(new_url)
-                    else:
-                        new_tracker_list.append(tracker)
-                        logger.info(f"{tracker} 替换为\n {new_url}")
+                    new_url = tracker
+                    for target_domain, replace_domain in zip(self._target_domains, self._replace_domains):
+                        if target_domain in tracker:
+                            new_url = tracker.replace(target_domain, replace_domain)
+                            logger.info(f"{tracker} 替换为\n {new_url}")
+                    new_tracker_list.append(new_url)
                 self._downloader.update_tracker(hash_string=torrent.hashString, tracker_list=new_tracker_list)
 
         logger.info("tracker替换完成")
@@ -97,8 +97,8 @@ class TrackerEditor(_PluginBase):
             "password": self._password,
             "host": self._host,
             "port": self._port,
-            "target_domain": self._target_domain,
-            "replace_domain": self._replace_domain
+            "target_domains": self._target_domains,
+            "replace_domains": self._replace_domains
         })
 
     @staticmethod
@@ -230,7 +230,8 @@ class TrackerEditor(_PluginBase):
                                 ]
                             }
                         ]
-                    }, {
+                    }, 
+                    {
                         'component': 'VRow',
                         'content': [
                             {
@@ -243,9 +244,9 @@ class TrackerEditor(_PluginBase):
                                     {
                                         'component': 'VTextField',
                                         'props': {
-                                            'model': 'target_domain',
-                                            'label': '待替换文本',
-                                            'placeholder': 'target.com'
+                                            'model': 'target_domains',
+                                            'label': '待替换文本 (用逗号分隔)',
+                                            'placeholder': 'target.com, example.com'
                                         }
                                     }
                                 ]
@@ -260,9 +261,9 @@ class TrackerEditor(_PluginBase):
                                     {
                                         'component': 'VTextField',
                                         'props': {
-                                            'model': 'replace_domain',
-                                            'label': '替换的文本',
-                                            'placeholder': 'replace.net'
+                                            'model': 'replace_domains',
+                                            'label': '替换的文本 (用逗号分隔)',
+                                            'placeholder': 'replace.net, example.org'
                                         }
                                     }
                                 ]
@@ -283,7 +284,7 @@ class TrackerEditor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '对下载器中所有符合代替换文本的tacker进行字符串replace替换' + '\n' +
+                                            'text': '对下载器中所有符合代替换文本的tracker进行字符串replace替换' + '\n' +
                                                     '现有tracker: https://baidu.com/announce.php?passkey=xxxx' + '\n' +
                                                     '待替换 baidu.com 或 https://baidu.com' + '\n' +
                                                     '用于替换的文本 qq.com 或 https://qq.com' + '\n' +
@@ -313,8 +314,8 @@ class TrackerEditor(_PluginBase):
             "port": 8989,
             "username": "username",
             "password": "password",
-            "target_domain": "",
-            "replace_domain": ""
+            "target_domains": [],
+            "replace_domains": []
         }
 
     def get_page(self) -> List[dict]:
